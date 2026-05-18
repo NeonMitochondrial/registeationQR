@@ -75,37 +75,34 @@ border-radius:8px;
 margin-top:14px;
 font-size:16px;
 cursor:pointer;
-transition:0.3s;
 font-weight:600;
 }
 
-.btn:hover{
-background:#1e8449;
+.btn:hover{background:#1e8449;}
+
+.btn-red{background:#c0392b;}
+.btn-red:hover{background:#922b21;}
+
+#cameraContainer{
+display:none;
+margin-top:20px;
 }
 
-.btn-red{
-background:#c0392b;
+video{
+width:100%;
+border-radius:10px;
+border:2px solid #dcdfe1;
 }
 
-.btn-red:hover{
-background:#922b21;
-}
+canvas{display:none;}
 
 .alerta-datos{
 background:#fff4cc;
 padding:12px;
 margin-top:20px;
 border-radius:8px;
-text-align:center;
-font-size:15px;
 font-weight:bold;
 color:#8a6d00;
-}
-
-.alerta-datos a{
-color:#005bbb;
-text-decoration:underline;
-font-weight:bold;
 }
 
 .datos-box{
@@ -119,10 +116,8 @@ text-align:left;
 #modal{
 display:none;
 position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
+top:0;left:0;
+width:100%;height:100%;
 background:rgba(0,0,0,0.55);
 justify-content:center;
 align-items:center;
@@ -131,78 +126,51 @@ z-index:9999;
 
 #modalContent{
 background:white;
-padding:25px 30px;
+padding:25px;
 border-radius:10px;
 text-align:center;
-font-size:18px;
 width:300px;
-box-shadow:0 4px 16px rgba(0,0,0,0.2);
 }
 
 .spinner{
 border:4px solid #f3f3f3;
 border-top:4px solid #27ae60;
 border-radius:50%;
-width:30px;
-height:30px;
+width:30px;height:30px;
 animation:spin 1s linear infinite;
-margin:0 auto 10px auto;
+margin:auto;
 }
 
-@keyframes spin{
-0%{transform:rotate(0deg);}
-100%{transform:rotate(360deg);}
-}
-
-#cameraContainer{
-display:none;
-margin-top:20px;
-}
-
-#video{
-width:100%;
-border-radius:10px;
-border:2px solid #dcdfe1;
-}
+@keyframes spin{100%{transform:rotate(360deg)}}
 
 </style>
 </head>
 
 <body>
 
-<div id="mensajeAyuda">
-Cualquier duda o consulta escribir a:<br>
-<strong>gestioneventos@hdcsolution.com</strong>
-</div>
-
 <div class="container">
 
 <div class="header">
-<img src="">
+<img src="https://i.postimg.cc/NM0Vf2rx/brave-screenshot-scontent-flim15-2-fna-fbcdn-net.png">
 </div>
 
-<h2>Consulta de Participantes - LIMA KNEE SYMPOSIUM 2026</h2>
+<h2>Consulta de Participantes</h2>
 
-<label>Ingresar DNI/CE</label>
-<label>Si su DNI no aparece probar quitando los 0 de adelante</label>
-
+<label>DNI / CE</label>
 <input type="text" id="dni" placeholder="Ingrese DNI o CE">
 
-<button class="btn" onclick="buscar()">
-BUSCAR
-</button>
+<button class="btn" onclick="buscar()">BUSCAR</button>
 
-<button class="btn" onclick="abrirCamaraFrontal()">
-📷 ABRIR CÁMARA FRONTAL
-</button>
+<button class="btn" onclick="iniciarQR()">📷 ESCANEAR QR</button>
 
 <div id="cameraContainer">
 
 <video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 
-<button class="btn btn-red" onclick="cerrarCamara()">
-❌ CERRAR CÁMARA
-</button>
+<button class="btn btn-red" onclick="detenerQR()">❌ DETENER</button>
+
+<p id="qrText"></p>
 
 </div>
 
@@ -211,123 +179,137 @@ BUSCAR
 </div>
 
 <!-- MODAL -->
-
 <div id="modal">
 <div id="modalContent">
 <div class="spinner"></div>
-<p id="modalTexto">Buscando datos...</p>
+<p id="modalTexto">Cargando...</p>
 </div>
 </div>
 
 <script>
 
-let streamActual = null;
+let stream=null;
+let interval=null;
 
-function mostrarModal(texto){
-document.getElementById("modalTexto").innerText=texto;
-document.getElementById("modal").style.display="flex";
-}
-
-function cerrarModal(){
-document.getElementById("modal").style.display="none";
-}
-
+/* ================= BUSCAR ================= */
 function buscar(){
 
 const dni=document.getElementById("dni").value.trim();
-const result=document.getElementById("resultado");
+if(!dni){alert("Ingrese DNI");return;}
 
-if(!dni){
-alert("Ingrese un DNI válido");
-return;
-}
+mostrarModal("Buscando...");
 
-mostrarModal("Buscando datos...");
-
-google.script.run.withSuccessHandler(function(res){
+google.script.run.withSuccessHandler(res=>{
 
 cerrarModal();
 
 if(!res){
-
-result.innerHTML=`
-<p style='color:red;font-weight:bold;'>
-❌ DNI no encontrado.<br>
-Escribir a:<br>
-<a href="mailto:gestioneventos@hdcsolution.com">
-gestioneventos@hdcsolution.com
-</a>
-</p>
-`;
-
+document.getElementById("resultado").innerHTML="❌ No encontrado";
 return;
 }
 
-result.innerHTML=`
-
-<div class="alerta-datos">
-Si sus datos están errados o incompletos,<br>
-escribir a:<br>
-<a href="mailto:gestioneventos@hdcsolution.com">
-gestioneventos@hdcsolution.com
-</a>
-</div>
-
+document.getElementById("resultado").innerHTML=`
 <div class="datos-box">
-
-<p><b>Nombre:</b><br>${res.nombre}</p>
-
-<p><b>DNI:</b><br>${res.dni}</p>
-
-<p><b>Categoría:</b><br>${res.categoria}</p>
-
-<p><b>Nota:</b><br>${res.nota}</p>
-
+<p><b>Nombre:</b> ${res.nombre}</p>
+<p><b>DNI:</b> ${res.dni}</p>
+<p><b>Categoría:</b> ${res.categoria}</p>
+<p><b>Nota:</b> ${res.nota}</p>
 </div>
-
 `;
 
 }).buscarPorDNI(dni);
 
 }
 
-async function abrirCamaraFrontal(){
+/* ================= MODAL ================= */
+function mostrarModal(t){
+document.getElementById("modalTexto").innerText=t;
+document.getElementById("modal").style.display="flex";
+}
+function cerrarModal(){
+document.getElementById("modal").style.display="none";
+}
+
+/* ================= QR ================= */
+async function iniciarQR(){
 
 try{
 
 const video=document.getElementById("video");
-const container=document.getElementById("cameraContainer");
 
-streamActual=await navigator.mediaDevices.getUserMedia({
-video:{
-facingMode:"user"
-},
+if(stream) stream.getTracks().forEach(t=>t.stop());
+
+stream=await navigator.mediaDevices.getUserMedia({
+video:{facingMode:"user"},
 audio:false
 });
 
-video.srcObject=streamActual;
+video.srcObject=stream;
+await video.play();
 
-container.style.display="block";
+document.getElementById("cameraContainer").style.display="block";
 
-}catch(error){
+interval=setInterval(escanear,500);
 
-alert("No se pudo abrir la cámara frontal");
-
-console.error(error);
-
+}catch(e){
+alert("No se pudo abrir cámara");
+console.error(e);
 }
 
 }
 
-function cerrarCamara(){
+function detenerQR(){
 
-if(streamActual){
+if(interval) clearInterval(interval);
+interval=null;
 
-streamActual.getTracks().forEach(track => track.stop());
-
+if(stream){
+stream.getTracks().forEach(t=>t.stop());
+stream=null;
 }
 
 document.getElementById("cameraContainer").style.display="none";
+document.getElementById("qrText").innerText="";
+}
+
+/* ================= ESCANEO ================= */
+function escanear(){
+
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+if(video.readyState<2) return;
+
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+
+ctx.drawImage(video,0,0);
+
+if(!('BarcodeDetector' in window)){
+document.getElementById("qrText").innerText="No soporta QR en este navegador";
+return;
+}
+
+const detector=new BarcodeDetector({formats:["qr_code"]});
+
+detector.detect(canvas).then(codes=>{
+
+if(codes.length>0){
+
+const qr=codes[0].rawValue;
+
+document.getElementById("qrText").innerText="QR: "+qr;
+
+document.getElementById("dni").value=qr;
+
+buscar();
+
+detenerQR();
+
+}
+
+});
 
 }
 
