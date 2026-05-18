@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Consulta Participantes</title>
+
+<style>
+
+body{
+font-family:"Segoe UI",Arial,sans-serif;
+background:#f4f7f6;
+margin:0;
+padding:30px 0;
+display:flex;
+justify-content:center;
+}
+
+#mensajeAyuda{
+position:fixed;
+top:10px;
+right:15px;
+background:rgba(255,255,255,0.95);
+padding:8px 14px;
+border-radius:6px;
+font-size:14px;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+z-index:9999;
+}
+
+.container{
+background:#ffffff;
+padding:30px;
+border-radius:12px;
+width:420px;
+box-shadow:0 4px 18px rgba(0,0,0,0.15);
+text-align:center;
+}
+
+.header img{
+width:100%;
+border-radius:10px;
+margin-bottom:15px;
+}
+
+h2{
+margin:10px 0 25px 0;
+color:#2f3640;
+font-weight:700;
+font-size:22px;
+}
+
+label{
+font-weight:600;
+color:#2f3640;
+display:block;
+margin-top:6px;
+}
+
+input{
+width:100%;
+padding:12px;
+margin-top:8px;
+border:2px solid #dcdfe1;
+border-radius:8px;
+font-size:16px;
+box-sizing:border-box;
+}
+
+.btn{
+width:100%;
+padding:12px;
+border:none;
+background:#27ae60;
+color:white;
+border-radius:8px;
+margin-top:14px;
+font-size:16px;
+cursor:pointer;
+transition:0.3s;
+font-weight:600;
+}
+
+.btn:hover{
+background:#1e8449;
+}
+
+.btn-red{
+background:#c0392b;
+}
+
+.btn-red:hover{
+background:#922b21;
+}
+
+.alerta-datos{
+background:#fff4cc;
+padding:12px;
+margin-top:20px;
+border-radius:8px;
+text-align:center;
+font-size:15px;
+font-weight:bold;
+color:#8a6d00;
+}
+
+.alerta-datos a{
+color:#005bbb;
+text-decoration:underline;
+font-weight:bold;
+}
+
+.datos-box{
+background:#eef1ef;
+padding:15px;
+border-radius:8px;
+margin-top:18px;
+text-align:left;
+}
+
+#modal{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.55);
+justify-content:center;
+align-items:center;
+z-index:9999;
+}
+
+#modalContent{
+background:white;
+padding:25px 30px;
+border-radius:10px;
+text-align:center;
+font-size:18px;
+width:300px;
+box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+
+.spinner{
+border:4px solid #f3f3f3;
+border-top:4px solid #27ae60;
+border-radius:50%;
+width:30px;
+height:30px;
+animation:spin 1s linear infinite;
+margin:0 auto 10px auto;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+#cameraContainer{
+display:none;
+margin-top:20px;
+}
+
+#video{
+width:100%;
+border-radius:10px;
+border:2px solid #dcdfe1;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="mensajeAyuda">
+Cualquier duda o consulta escribir a:<br>
+<strong>gestioneventos@hdcsolution.com</strong>
+</div>
+
+<div class="container">
+
+<div class="header">
+<img src="https://i.postimg.cc/NM0Vf2rx/brave-screenshot-scontent-flim15-2-fna-fbcdn-net.png">
+</div>
+
+<h2>Consulta de Participantes - LIMA KNEE SYMPOSIUM 2026</h2>
+
+<label>Ingresar DNI/CE</label>
+<label>Si su DNI no aparece probar quitando los 0 de adelante</label>
+
+<input type="text" id="dni" placeholder="Ingrese DNI o CE">
+
+<button class="btn" onclick="buscar()">
+BUSCAR
+</button>
+
+<button class="btn" onclick="abrirCamaraFrontal()">
+📷 ABRIR CÁMARA FRONTAL
+</button>
+
+<div id="cameraContainer">
+
+<video id="video" autoplay playsinline></video>
+
+<button class="btn btn-red" onclick="cerrarCamara()">
+❌ CERRAR CÁMARA
+</button>
+
+</div>
+
+<div id="resultado"></div>
+
+</div>
+
+<div id="modal">
+
+<div id="modalContent">
+
+<div class="spinner"></div>
+
+<p id="modalTexto">
+Buscando datos...
+</p>
+
+</div>
+
+</div>
+
+<script>
+
+let streamActual = null;
+
+function mostrarModal(texto){
+
+document.getElementById("modalTexto").innerText = texto;
+
+document.getElementById("modal").style.display = "flex";
+
+}
+
+function cerrarModal(){
+
+document.getElementById("modal").style.display = "none";
+
+}
+
+async function buscar(){
+
+const dni = document.getElementById("dni").value.trim();
+
+const result = document.getElementById("resultado");
+
+if(!dni){
+
+alert("Ingrese un DNI válido");
+
+return;
+
+}
+
+mostrarModal("Buscando datos...");
+
+try{
+
+const response = await fetch("/.netlify/functions/buscar", {
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body: JSON.stringify({ dni })
+
+});
+
+const res = await response.json();
+
+cerrarModal();
+
+if(!response.ok){
+
+result.innerHTML = `
+<p style='color:red;font-weight:bold;'>
+
+❌ DNI no encontrado.<br>
+
+Escribir a:<br>
+
+<a href="mailto:gestioneventos@hdcsolution.com">
+gestioneventos@hdcsolution.com
+</a>
+
+</p>
+`;
+
+return;
+
+}
+
+result.innerHTML = `
+
+<div class="alerta-datos">
+
+Si sus datos están errados o incompletos,<br>
+
+escribir a:<br>
+
+<a href="mailto:gestioneventos@hdcsolution.com">
+gestioneventos@hdcsolution.com
+</a>
+
+</div>
+
+<div class="datos-box">
+
+<p><b>Nombre:</b><br>${res.nombre}</p>
+
+<p><b>DNI:</b><br>${res.dni}</p>
+
+<p><b>Categoría:</b><br>${res.categoria}</p>
+
+<p><b>Nota:</b><br>${res.nota}</p>
+
+</div>
+`;
+
+}catch(error){
+
+cerrarModal();
+
+console.error(error);
+
+alert("Error de conexión");
+
+}
+
+}
+
+async function abrirCamaraFrontal(){
+
+try{
+
+const video = document.getElementById("video");
+
+const container = document.getElementById("cameraContainer");
+
+if(streamActual){
+
+streamActual.getTracks().forEach(track => track.stop());
+
+}
+
+streamActual = await navigator.mediaDevices.getUserMedia({
+
+video:{
+width:{ ideal:1280 },
+height:{ ideal:720 },
+facingMode:"user"
+},
+
+audio:false
+
+});
+
+video.srcObject = streamActual;
+
+await video.play();
+
+container.style.display = "block";
+
+}catch(error){
+
+console.error(error);
+
+alert("No se pudo abrir la cámara");
+
+}
+
+}
+
+function cerrarCamara(){
+
+if(streamActual){
+
+streamActual.getTracks().forEach(track => track.stop());
+
+}
+
+document.getElementById("cameraContainer").style.display = "none";
+
+}
+
+</script>
+
+</body>
+
+</html>

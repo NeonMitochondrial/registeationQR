@@ -1,0 +1,7 @@
+{
+  "name": "consulta-participantes",
+  "version": "1.0.0",
+  "dependencies": {
+    "googleapis": "^135.0.0"
+  }
+}
