@@ -1,12 +1,7 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Consulta Participantes</title>
+  <base target="_top">
 
 <style>
 
@@ -171,7 +166,6 @@ border:2px solid #dcdfe1;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -216,18 +210,13 @@ BUSCAR
 
 </div>
 
+<!-- MODAL -->
+
 <div id="modal">
-
 <div id="modalContent">
-
 <div class="spinner"></div>
-
-<p id="modalTexto">
-Buscando datos...
-</p>
-
+<p id="modalTexto">Buscando datos...</p>
 </div>
-
 </div>
 
 <script>
@@ -235,85 +224,53 @@ Buscando datos...
 let streamActual = null;
 
 function mostrarModal(texto){
-
-document.getElementById("modalTexto").innerText = texto;
-
-document.getElementById("modal").style.display = "flex";
-
+document.getElementById("modalTexto").innerText=texto;
+document.getElementById("modal").style.display="flex";
 }
 
 function cerrarModal(){
-
-document.getElementById("modal").style.display = "none";
-
+document.getElementById("modal").style.display="none";
 }
 
-async function buscar(){
+function buscar(){
 
-const dni = document.getElementById("dni").value.trim();
-
-const result = document.getElementById("resultado");
+const dni=document.getElementById("dni").value.trim();
+const result=document.getElementById("resultado");
 
 if(!dni){
-
 alert("Ingrese un DNI válido");
-
 return;
-
 }
 
 mostrarModal("Buscando datos...");
 
-try{
-
-const response = await fetch("/.netlify/functions/buscar", {
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body: JSON.stringify({ dni })
-
-});
-
-const res = await response.json();
+google.script.run.withSuccessHandler(function(res){
 
 cerrarModal();
 
-if(!response.ok){
+if(!res){
 
-result.innerHTML = `
+result.innerHTML=`
 <p style='color:red;font-weight:bold;'>
-
 ❌ DNI no encontrado.<br>
-
 Escribir a:<br>
-
 <a href="mailto:gestioneventos@hdcsolution.com">
 gestioneventos@hdcsolution.com
 </a>
-
 </p>
 `;
 
 return;
-
 }
 
-result.innerHTML = `
+result.innerHTML=`
 
 <div class="alerta-datos">
-
 Si sus datos están errados o incompletos,<br>
-
 escribir a:<br>
-
 <a href="mailto:gestioneventos@hdcsolution.com">
 gestioneventos@hdcsolution.com
 </a>
-
 </div>
 
 <div class="datos-box">
@@ -327,17 +284,10 @@ gestioneventos@hdcsolution.com
 <p><b>Nota:</b><br>${res.nota}</p>
 
 </div>
+
 `;
 
-}catch(error){
-
-cerrarModal();
-
-console.error(error);
-
-alert("Error de conexión");
-
-}
+}).buscarPorDNI(dni);
 
 }
 
@@ -345,39 +295,25 @@ async function abrirCamaraFrontal(){
 
 try{
 
-const video = document.getElementById("video");
+const video=document.getElementById("video");
+const container=document.getElementById("cameraContainer");
 
-const container = document.getElementById("cameraContainer");
-
-if(streamActual){
-
-streamActual.getTracks().forEach(track => track.stop());
-
-}
-
-streamActual = await navigator.mediaDevices.getUserMedia({
-
+streamActual=await navigator.mediaDevices.getUserMedia({
 video:{
-width:{ ideal:1280 },
-height:{ ideal:720 },
 facingMode:"user"
 },
-
 audio:false
-
 });
 
-video.srcObject = streamActual;
+video.srcObject=streamActual;
 
-await video.play();
-
-container.style.display = "block";
+container.style.display="block";
 
 }catch(error){
 
-console.error(error);
+alert("No se pudo abrir la cámara frontal");
 
-alert("No se pudo abrir la cámara");
+console.error(error);
 
 }
 
@@ -391,12 +327,11 @@ streamActual.getTracks().forEach(track => track.stop());
 
 }
 
-document.getElementById("cameraContainer").style.display = "none";
+document.getElementById("cameraContainer").style.display="none";
 
 }
 
 </script>
 
 </body>
-
 </html>
